@@ -1,0 +1,42 @@
+name: apply-den-3461
+on:
+  push:
+    branches: [agent/den-3461-candidate-inbox]
+permissions:
+  contents: write
+concurrency:
+  group: apply-den-3461
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Apply staged candidate inbox
+        run: |
+          mkdir -p src docs .github/workflows
+          cp .den-3461/Cargo.toml Cargo.toml
+          cp .den-3461/env.example .env.example
+          cp .den-3461/ci.yml .github/workflows/ci.yml
+          cp .den-3461/README.md README.md
+          cp .den-3461/architecture.md docs/architecture.md
+          cp .den-3461/config.rs src/config.rs
+          cp .den-3461/models.rs src/models.rs
+          cp .den-3461/api.rs src/api.rs
+          cp .den-3461/main.rs src/main.rs
+          rm -rf .den-3461
+          cargo generate-lockfile
+          cargo fmt --all
+      - name: Commit applied and formatted implementation
+        run: |
+          git config user.name "embedded-alerts-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git rm --ignore-unmatch .github/workflows/apply-den-3461.yml
+          git add -A
+          git commit -m "feat(DEN-3461): add read-only Dioxus candidate inbox"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
